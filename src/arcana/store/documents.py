@@ -36,6 +36,15 @@ class DocumentStore:
                 duration_s REAL NOT NULL, created_at TEXT NOT NULL,
                 FOREIGN KEY (job_id) REFERENCES jobs(id)
             )""")
+        await self.db.execute("""
+            CREATE TABLE IF NOT EXISTS extracted_text (
+                job_id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                text TEXT NOT NULL,
+                pages INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (job_id) REFERENCES jobs(id)
+            )""")
 
     async def create_job(self, job_type: str, file_path: str = "", file_checksum: str = "",
                          filename: str = "", doc_type: str = "", question: str = "") -> dict:
@@ -76,3 +85,18 @@ class DocumentStore:
 
     async def get_report(self, job_id: str) -> dict | None:
         return await self.db.fetchone("SELECT * FROM reports WHERE job_id = ?", (job_id,))
+
+    async def save_extracted_text(
+        self, job_id: str, title: str, text: str, pages: int
+    ) -> None:
+        now = datetime.now(UTC).isoformat()
+        await self.db.execute(
+            "INSERT OR REPLACE INTO extracted_text (job_id, title, text, pages, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (job_id, title, text, pages, now),
+        )
+
+    async def get_extracted_text(self, job_id: str) -> dict | None:
+        return await self.db.fetchone(
+            "SELECT * FROM extracted_text WHERE job_id = ?", (job_id,)
+        )

@@ -69,6 +69,13 @@ async def _run_ingest(graph, state, doc_store):
             "chunk_count": result.get("chunk_count"),
             "error": result.get("error"),
         })
+        if status == "completed" and result.get("text"):
+            await doc_store.save_extracted_text(
+                job_id=state["job_id"],
+                title=result.get("title", "Untitled"),
+                text=result["text"],
+                pages=result.get("pages", 0),
+            )
         await doc_store.update_job_status(state["job_id"], status)
     except Exception as e:
         log("ingest", "error", "ingest_exception", {
@@ -136,6 +143,23 @@ async def get_job(request: Request, job_id: str):
         return JSONResponse({"error": "not found"}, status_code=404)
     report = await doc_store.get_report(job_id)
     return {"job": job, "report": report}
+
+
+@router.get("/api/jobs/{job_id}/text")
+async def get_job_text(request: Request, job_id: str):
+    doc_store = request.app.state.doc_store
+    job = await doc_store.get_job(job_id)
+    if not job:
+        return JSONResponse({"error": "not found"}, status_code=404)
+    extracted = await doc_store.get_extracted_text(job_id)
+    if not extracted:
+        return JSONResponse({"error": "no extracted text for this job"}, status_code=404)
+    return {
+        "job_id": job_id,
+        "title": extracted["title"],
+        "text": extracted["text"],
+        "pages": extracted["pages"],
+    }
 
 
 @router.get("/", response_class=HTMLResponse)
