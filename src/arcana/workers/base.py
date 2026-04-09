@@ -58,7 +58,8 @@ class BaseWorker(ABC):
         self._nc = await nats.connect(self.nats_url)
         js = self._nc.jetstream()
         self._sub = await js.subscribe(
-            self.subject, queue=f"{self.subject}-workers", manual_ack=True
+            self.subject, queue=f"{self.subject}-workers", manual_ack=True,
+            stream="ARCANA",
         )
         self._running = True
         log(self.subject, "info", "worker_started", {"subject": self.subject})
