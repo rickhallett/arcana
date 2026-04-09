@@ -41,6 +41,11 @@ async def main() -> None:
     else:
         print(f"Unknown worker type: {worker_type}", file=sys.stderr)
         sys.exit(1)
+    # Stagger startup by worker type to avoid thundering herd on NATS
+    stagger = {"extractor": 0, "embedder": 3, "analyst": 6, "checker": 9}
+    delay = stagger.get(worker_type, 0)
+    if delay:
+        await asyncio.sleep(delay)
     await worker.start()
 
 
