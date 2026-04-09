@@ -90,22 +90,42 @@ async def submit_query(request: Request):
     await doc_store.update_job_status(job["id"], "processing", step="retrieve")
     graph = build_query_graph(dispatcher, vector_store)
     start = time.time()
-    result = await graph.ainvoke({"job_id": job["id"], "question": question, "status": "pending"})
-    duration = time.time() - start
-    if result.get("status") == "completed":
-        await doc_store.save_report(
-            job_id=job["id"],
-            answer=result.get("answer", ""),
-            claims_json=json.dumps(result.get("claims", [])),
-            confidence=result.get("confidence", 0.0),
-            cost_usd=result.get("cost_usd", 0.0),
-            duration_s=round(duration, 2),
+    try:
+        result = await graph.ainvoke(
+            {"job_id": job["id"], "question": question, "status": "pending"}
         )
-        await doc_store.update_job_status(job["id"], "completed")
-    else:
+    except Exception as e:
+        log("query", "error", "query_exception", {
+            "job_id": job["id"], "error": str(e),
+        })
         await doc_store.update_job_status(job["id"], "failed")
+        return JSONResponse(
+            {"job_id": job["id"], "status": "failed", "error": str(e), "report": None},
+            status_code=200,
+        )
+    duration = time.time() - start
+    status = result.get("status", "failed")
+
+    if status in ("completed", "failed"):
+        answer = result.get("answer") or result.get("draft", "")
+        if answer:
+            await doc_store.save_report(
+                job_id=job["id"],
+                answer=answer,
+                claims_json=json.dumps(result.get("claims", [])),
+                confidence=result.get("confidence", 0.0),
+                cost_usd=result.get("cost_usd", 0.0),
+                duration_s=round(duration, 2),
+            )
+        await doc_store.update_job_status(job["id"], status)
+
     report = await doc_store.get_report(job["id"])
-    return {"job_id": job["id"], "status": result.get("status"), "report": report}
+    return {
+        "job_id": job["id"],
+        "status": status,
+        "error": result.get("error"),
+        "report": report,
+    }
 
 
 @router.get("/api/jobs/{job_id}")

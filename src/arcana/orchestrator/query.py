@@ -40,6 +40,8 @@ def build_query_graph(dispatcher: NATSDispatcher, vector_store):
                 step="analyse",
                 correlation_id=state["job_id"],
             )
+            if "error" in result:
+                return {**state, "status": "failed", "error": result["error"]}
             return {
                 **state,
                 "draft": result["draft"],
@@ -63,9 +65,13 @@ def build_query_graph(dispatcher: NATSDispatcher, vector_store):
                 step="check",
                 correlation_id=state["job_id"],
             )
+            if "error" in result:
+                # Checker failed — proceed with unchecked draft
+                return {**state, "claims": [], "status": "checked"}
             return {**state, "claims": result["claims"], "status": "checked"}
-        except DispatchError as e:
-            return {**state, "status": "failed", "error": str(e)}
+        except DispatchError:
+            # Dispatch exhausted retries — proceed with unchecked draft
+            return {**state, "claims": [], "status": "checked"}
 
     async def synthesise_node(state: QueryState) -> QueryState:
         if state.get("status") == "no_results":
