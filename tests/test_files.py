@@ -1,7 +1,5 @@
 import hashlib
 
-import pytest
-
 from arcana.store.files import FileStore
 
 

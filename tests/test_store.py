@@ -96,7 +96,7 @@ async def test_list_jobs(store):
 
 
 async def test_list_jobs_respects_limit(store):
-    for i in range(5):
+    for _i in range(5):
         await store.create_job(job_type="ingest")
     jobs = await store.list_jobs(limit=3)
     assert len(jobs) == 3

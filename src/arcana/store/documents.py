@@ -1,7 +1,19 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from arcana.store.database import Database
+
+_INSERT_JOB = (
+    "INSERT INTO jobs "
+    "(id, job_type, status, file_path, file_checksum, filename, "
+    "doc_type, question, created_at, updated_at) "
+    "VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)"
+)
+_INSERT_REPORT = (
+    "INSERT INTO reports "
+    "(id, job_id, answer, claims_json, confidence, cost_usd, duration_s, created_at) "
+    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+)
 
 
 class DocumentStore:
@@ -28,9 +40,9 @@ class DocumentStore:
     async def create_job(self, job_type: str, file_path: str = "", file_checksum: str = "",
                          filename: str = "", doc_type: str = "", question: str = "") -> dict:
         job_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         await self.db.execute(
-            "INSERT INTO jobs (id, job_type, status, file_path, file_checksum, filename, doc_type, question, created_at, updated_at) VALUES (?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?)",
+            _INSERT_JOB,
             (job_id, job_type, file_path, file_checksum, filename, doc_type, question, now, now))
         return await self.get_job(job_id)
 
@@ -41,7 +53,7 @@ class DocumentStore:
         return await self.db.fetchone("SELECT * FROM jobs WHERE id = ?", (job_id,))
 
     async def update_job_status(self, job_id: str, status: str, step: str | None = None) -> None:
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         await self.db.execute(
             "UPDATE jobs SET status = ?, current_step = ?, updated_at = ? WHERE id = ?",
             (status, step, now, job_id))
@@ -57,9 +69,9 @@ class DocumentStore:
     async def save_report(self, job_id: str, answer: str, claims_json: str,
                           confidence: float, cost_usd: float, duration_s: float) -> None:
         report_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         await self.db.execute(
-            "INSERT INTO reports (id, job_id, answer, claims_json, confidence, cost_usd, duration_s, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            _INSERT_REPORT,
             (report_id, job_id, answer, claims_json, confidence, cost_usd, duration_s, now))
 
     async def get_report(self, job_id: str) -> dict | None:
