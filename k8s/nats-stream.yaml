@@ -1,0 +1,25 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: arcana-nats-stream-init
+  namespace: arcana
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: nats-stream-init
+          image: natsio/nats-box:latest
+          command:
+            - sh
+            - -c
+            - |
+              nats stream add ARCANA \
+                --server nats://nats.halo-fleet:4222 \
+                --subjects "arcana.>" \
+                --retention limits \
+                --max-age 72h \
+                --storage file \
+                --replicas 1 \
+                --defaults

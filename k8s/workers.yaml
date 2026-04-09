@@ -1,0 +1,165 @@
+---
+# Extractor worker — reads uploads, calls OpenAI for text extraction
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arcana-extractor
+  namespace: arcana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: arcana-extractor
+  template:
+    metadata:
+      labels:
+        app: arcana-extractor
+    spec:
+      containers:
+        - name: extractor
+          image: arcana:latest
+          command: ["uv", "run", "python", "-m", "arcana.workers"]
+          env:
+            - name: ARCANA_WORKER_TYPE
+              value: extractor
+            - name: ARCANA_NATS_URL
+              value: nats://nats.halo-fleet:4222
+            - name: ARCANA_UPLOADS_DIR
+              value: /data/uploads
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: arcana-api-keys
+                  key: OPENAI_API_KEY
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "500m"
+            limits:
+              memory: "512Mi"
+              cpu: "1000m"
+          volumeMounts:
+            - name: uploads
+              mountPath: /data/uploads
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: arcana-uploads
+---
+# Embedder worker — chunks text and upserts into ChromaDB
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arcana-embedder
+  namespace: arcana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: arcana-embedder
+  template:
+    metadata:
+      labels:
+        app: arcana-embedder
+    spec:
+      containers:
+        - name: embedder
+          image: arcana:latest
+          command: ["uv", "run", "python", "-m", "arcana.workers"]
+          env:
+            - name: ARCANA_WORKER_TYPE
+              value: embedder
+            - name: ARCANA_NATS_URL
+              value: nats://nats.halo-fleet:4222
+            - name: ARCANA_CHROMA_HOST
+              value: arcana-chromadb
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: arcana-api-keys
+                  key: OPENAI_API_KEY
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+---
+# Analyst worker — runs LangGraph query graph via Anthropic
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arcana-analyst
+  namespace: arcana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: arcana-analyst
+  template:
+    metadata:
+      labels:
+        app: arcana-analyst
+    spec:
+      containers:
+        - name: analyst
+          image: arcana:latest
+          command: ["uv", "run", "python", "-m", "arcana.workers"]
+          env:
+            - name: ARCANA_WORKER_TYPE
+              value: analyst
+            - name: ARCANA_NATS_URL
+              value: nats://nats.halo-fleet:4222
+            - name: ARCANA_CHROMA_HOST
+              value: arcana-chromadb
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: arcana-api-keys
+                  key: ANTHROPIC_API_KEY
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+---
+# Checker worker — LLM-as-judge eval via OpenAI
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arcana-checker
+  namespace: arcana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: arcana-checker
+  template:
+    metadata:
+      labels:
+        app: arcana-checker
+    spec:
+      containers:
+        - name: checker
+          image: arcana:latest
+          command: ["uv", "run", "python", "-m", "arcana.workers"]
+          env:
+            - name: ARCANA_WORKER_TYPE
+              value: checker
+            - name: ARCANA_NATS_URL
+              value: nats://nats.halo-fleet:4222
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: arcana-api-keys
+                  key: OPENAI_API_KEY
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "250m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
