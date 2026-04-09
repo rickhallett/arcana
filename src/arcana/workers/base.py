@@ -57,10 +57,22 @@ class BaseWorker(ABC):
     async def start(self) -> None:
         self._nc = await nats.connect(self.nats_url)
         js = self._nc.jetstream()
-        self._sub = await js.subscribe(
-            self.subject, queue=f"{self.subject}-workers", manual_ack=True,
-            stream="ARCANA",
-        )
+
+        # Retry subscribe — NATS JetStream may not be ready immediately
+        for attempt in range(1, 6):
+            try:
+                self._sub = await js.subscribe(
+                    self.subject, queue=f"{self.subject}-workers", manual_ack=True,
+                    stream="ARCANA",
+                )
+                break
+            except Exception as e:
+                log(self.subject, "warning", "subscribe_retry",
+                    {"attempt": attempt, "error": str(e)})
+                if attempt == 5:
+                    raise
+                await asyncio.sleep(attempt * 2)
+
         self._running = True
         log(self.subject, "info", "worker_started", {"subject": self.subject})
         async for msg in self._sub.messages:
