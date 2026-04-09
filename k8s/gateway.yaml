@@ -27,7 +27,8 @@ spec:
     spec:
       containers:
         - name: gateway
-          image: arcana:latest
+          image: docker.io/library/arcana:latest
+          imagePullPolicy: Never
           ports:
             - containerPort: 8000
           env:
@@ -37,21 +38,21 @@ spec:
               value: arcana-chromadb
             - name: ARCANA_UPLOADS_DIR
               value: /data/uploads
-            - name: OPENAI_API_KEY
+            - name: ARCANA_OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: arcana-api-keys
-                  key: OPENAI_API_KEY
-            - name: ANTHROPIC_API_KEY
+                  key: ARCANA_OPENAI_API_KEY
+            - name: ARCANA_ANTHROPIC_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: arcana-api-keys
-                  key: ANTHROPIC_API_KEY
-            - name: LANGSMITH_API_KEY
+                  key: ARCANA_ANTHROPIC_API_KEY
+            - name: ARCANA_LANGSMITH_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: arcana-api-keys
-                  key: LANGSMITH_API_KEY
+                  key: ARCANA_LANGSMITH_API_KEY
             - name: ARCANA_DB_URL
               valueFrom:
                 secretKeyRef:

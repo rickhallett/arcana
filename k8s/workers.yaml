@@ -17,7 +17,8 @@ spec:
     spec:
       containers:
         - name: extractor
-          image: arcana:latest
+          image: docker.io/library/arcana:latest
+          imagePullPolicy: Never
           command: ["uv", "run", "python", "-m", "arcana.workers"]
           env:
             - name: ARCANA_WORKER_TYPE
@@ -26,11 +27,11 @@ spec:
               value: nats://nats.halo-fleet:4222
             - name: ARCANA_UPLOADS_DIR
               value: /data/uploads
-            - name: OPENAI_API_KEY
+            - name: ARCANA_OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: arcana-api-keys
-                  key: OPENAI_API_KEY
+                  key: ARCANA_OPENAI_API_KEY
           resources:
             requests:
               memory: "256Mi"
@@ -64,7 +65,8 @@ spec:
     spec:
       containers:
         - name: embedder
-          image: arcana:latest
+          image: docker.io/library/arcana:latest
+          imagePullPolicy: Never
           command: ["uv", "run", "python", "-m", "arcana.workers"]
           env:
             - name: ARCANA_WORKER_TYPE
@@ -73,11 +75,11 @@ spec:
               value: nats://nats.halo-fleet:4222
             - name: ARCANA_CHROMA_HOST
               value: arcana-chromadb
-            - name: OPENAI_API_KEY
+            - name: ARCANA_OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: arcana-api-keys
-                  key: OPENAI_API_KEY
+                  key: ARCANA_OPENAI_API_KEY
           resources:
             requests:
               memory: "128Mi"
@@ -104,7 +106,8 @@ spec:
     spec:
       containers:
         - name: analyst
-          image: arcana:latest
+          image: docker.io/library/arcana:latest
+          imagePullPolicy: Never
           command: ["uv", "run", "python", "-m", "arcana.workers"]
           env:
             - name: ARCANA_WORKER_TYPE
@@ -113,11 +116,11 @@ spec:
               value: nats://nats.halo-fleet:4222
             - name: ARCANA_CHROMA_HOST
               value: arcana-chromadb
-            - name: ANTHROPIC_API_KEY
+            - name: ARCANA_ANTHROPIC_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: arcana-api-keys
-                  key: ANTHROPIC_API_KEY
+                  key: ARCANA_ANTHROPIC_API_KEY
           resources:
             requests:
               memory: "128Mi"
@@ -144,18 +147,19 @@ spec:
     spec:
       containers:
         - name: checker
-          image: arcana:latest
+          image: docker.io/library/arcana:latest
+          imagePullPolicy: Never
           command: ["uv", "run", "python", "-m", "arcana.workers"]
           env:
             - name: ARCANA_WORKER_TYPE
               value: checker
             - name: ARCANA_NATS_URL
               value: nats://nats.halo-fleet:4222
-            - name: OPENAI_API_KEY
+            - name: ARCANA_OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: arcana-api-keys
-                  key: OPENAI_API_KEY
+                  key: ARCANA_OPENAI_API_KEY
           resources:
             requests:
               memory: "128Mi"
