@@ -1,6 +1,23 @@
-# Arcana
+<p align="center">
+  <h1 align="center">Arcana</h1>
+  <p align="center">
+    Multi-agent research analyst pipeline
+    <br />
+    <em>Upload documents. Ask questions. Get structured analysis with LLM-as-judge quality checks.</em>
+  </p>
+</p>
 
-Multi-agent research analyst pipeline — upload documents, ask questions, get structured analysis with LLM-as-judge quality checks.
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.11%2B-blue?logo=python&logoColor=white" alt="Python" />
+  <img src="https://img.shields.io/badge/LangGraph-orchestration-1C3C3C?logo=langchain&logoColor=white" alt="LangGraph" />
+  <img src="https://img.shields.io/badge/NATS-JetStream-27aae1?logo=nats.io&logoColor=white" alt="NATS" />
+  <img src="https://img.shields.io/badge/FastAPI-gateway-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/ChromaDB-vectors-FF6F00" alt="ChromaDB" />
+  <img src="https://img.shields.io/badge/k8s-ready-326CE5?logo=kubernetes&logoColor=white" alt="Kubernetes" />
+  <img src="https://img.shields.io/badge/docker-compose-2496ED?logo=docker&logoColor=white" alt="Docker" />
+</p>
+
+---
 
 ## Architecture
 
