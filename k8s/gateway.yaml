@@ -33,7 +33,7 @@ spec:
             - containerPort: 8000
           env:
             - name: ARCANA_NATS_URL
-              value: nats://hq:lxFDhD1sHNuGAmcE1kTPX6Ea6g9LzPXx@nats.halo-fleet.svc.cluster.local:4222
+              value: nats://nats.halo-fleet.svc.cluster.local:4222
             - name: ARCANA_CHROMA_HOST
               value: arcana-chromadb
             - name: ARCANA_UPLOADS_DIR
