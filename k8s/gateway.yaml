@@ -54,10 +54,7 @@ spec:
                   name: arcana-api-keys
                   key: ARCANA_LANGSMITH_API_KEY
             - name: ARCANA_DB_URL
-              valueFrom:
-                secretKeyRef:
-                  name: arcana-db
-                  key: ARCANA_DB_URL
+              value: "sqlite+aiosqlite:////data/uploads/arcana.db"
           livenessProbe:
             httpGet:
               path: /health
