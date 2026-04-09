@@ -1,9 +1,8 @@
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
 from arcana.orchestrator.ingest import build_ingest_graph
 from arcana.orchestrator.nats_dispatch import DispatchError, NATSDispatcher
-
+from arcana.orchestrator.query import build_query_graph
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -74,3 +73,105 @@ class TestIngestGraph:
             for call in dispatcher.dispatch.call_args_list
         ]
         assert "arcana.embed" not in subjects_called
+
+
+# ---------------------------------------------------------------------------
+# Task 17: Query Graph
+# ---------------------------------------------------------------------------
+
+def make_mock_vector_store(chunks: list[str], ids: list[str], distances: list[float]):
+    """Build a synchronous mock VectorStore."""
+    vs = MagicMock()
+    vs.query = MagicMock(return_value={
+        "ids": ids,
+        "documents": chunks,
+        "metadatas": [{} for _ in chunks],
+        "distances": distances,
+    })
+    return vs
+
+
+def make_empty_vector_store():
+    vs = MagicMock()
+    vs.query = MagicMock(return_value={
+        "ids": [], "documents": [], "metadatas": [], "distances": [],
+    })
+    return vs
+
+
+class TestQueryGraph:
+    async def test_full_query_pipeline_completes(self):
+        chunks = ["chunk A", "chunk B", "chunk C"]
+        ids = ["id-1", "id-2", "id-3"]
+        distances = [0.1, 0.2, 0.3]
+
+        dispatcher = make_mock_dispatcher({
+            "arcana.analyse": {
+                "draft": "The answer is 42.",
+                "citations": [{"id": "id-1", "text": "chunk A"}],
+            },
+            "arcana.check": {
+                "claims": [
+                    {"claim": "answer is 42", "verdict": "supported"},
+                    {"claim": "secondary claim", "verdict": "supported"},
+                ],
+            },
+        })
+        vs = make_mock_vector_store(chunks, ids, distances)
+        graph = build_query_graph(dispatcher, vs)
+
+        initial: dict = {
+            "job_id": "q-001",
+            "question": "What is the answer?",
+        }
+        result = await graph.ainvoke(initial)
+
+        assert result["status"] == "completed"
+        assert result["answer"] == "The answer is 42."
+        assert len(result["claims"]) == 2
+        assert result["confidence"] == 1.0  # 2 supported / 2 total
+        assert result["chunks"] == chunks
+        assert result["chunk_ids"] == ids
+
+    async def test_no_results_path(self):
+        vs = make_empty_vector_store()
+        dispatcher = make_mock_dispatcher({})  # should not be called
+        graph = build_query_graph(dispatcher, vs)
+
+        initial: dict = {
+            "job_id": "q-002",
+            "question": "Something with no matching docs?",
+        }
+        result = await graph.ainvoke(initial)
+
+        assert result["status"] == "completed"
+        assert result["answer"] == "No relevant documents found for this question."
+        assert result["confidence"] == 0.0
+        assert result["claims"] == []
+        # dispatcher should never have been called
+        dispatcher.dispatch.assert_not_called()
+
+    async def test_analyse_failure_short_circuits(self):
+        chunks = ["chunk X"]
+        ids = ["id-x"]
+        vs = make_mock_vector_store(chunks, ids, [0.1])
+
+        dispatcher = make_mock_dispatcher({
+            "arcana.analyse": DispatchError("arcana.analyse", "q-003", 3, "worker down"),
+        })
+        graph = build_query_graph(dispatcher, vs)
+
+        initial: dict = {
+            "job_id": "q-003",
+            "question": "Will this fail?",
+        }
+        result = await graph.ainvoke(initial)
+
+        assert result["status"] == "failed"
+        assert "arcana.analyse" in result["error"]
+        # check and synthesise should not run
+        subjects_called = [
+            call.kwargs.get("subject") or call.args[0]
+            for call in dispatcher.dispatch.call_args_list
+        ]
+        assert "arcana.check" not in subjects_called
