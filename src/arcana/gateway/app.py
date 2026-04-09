@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
@@ -31,6 +32,13 @@ def create_app() -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        if settings.langsmith_api_key:
+            os.environ["LANGCHAIN_TRACING_V2"] = "true"
+            os.environ["LANGCHAIN_API_KEY"] = settings.langsmith_api_key
+            os.environ["LANGCHAIN_PROJECT"] = settings.langsmith_project
+            if settings.trace_level == "metadata":
+                os.environ["LANGCHAIN_HIDE_INPUTS"] = "true"
+                os.environ["LANGCHAIN_HIDE_OUTPUTS"] = "true"
         await db.init()
         await doc_store.init_schema()
         with suppress(Exception):  # NATS may not be available in local dev

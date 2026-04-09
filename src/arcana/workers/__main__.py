@@ -1,4 +1,5 @@
 import asyncio
+import os
 import sys
 
 from arcana.config import Settings
@@ -6,6 +7,13 @@ from arcana.config import Settings
 
 async def main() -> None:
     settings = Settings()
+    if settings.langsmith_api_key:
+        os.environ["LANGCHAIN_TRACING_V2"] = "true"
+        os.environ["LANGCHAIN_API_KEY"] = settings.langsmith_api_key
+        os.environ["LANGCHAIN_PROJECT"] = settings.langsmith_project
+        if settings.trace_level == "metadata":
+            os.environ["LANGCHAIN_HIDE_INPUTS"] = "true"
+            os.environ["LANGCHAIN_HIDE_OUTPUTS"] = "true"
     worker_type = settings.worker_type
     if worker_type == "extractor":
         from arcana.workers.extractor import ExtractorWorker
