@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block title %}Documents — Arcana{% endblock %}
+
+{% block head %}
+<style>
+    .upload-zone {
+        border: 2px dashed #333;
+        border-radius: 6px;
+        padding: 32px;
+        text-align: center;
+        color: #666;
+        transition: border-color 0.2s;
+        cursor: pointer;
+    }
+    .upload-zone:hover { border-color: #555; color: #999; }
+    .upload-zone input[type="file"] {
+        display: none;
+    }
+    .job-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #1a1a1a;
+    }
+    .job-row:last-child { border-bottom: none; }
+    .job-name { font-size: 13px; color: #ccc; }
+    .job-meta { font-size: 11px; color: #555; margin-top: 2px; }
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: inline-block; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Documents</h1>
+
+<div class="card mb-20">
+    <h2>Upload Document</h2>
+    <form id="upload-form" enctype="multipart/form-data">
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+            <div id="upload-label">Click to select a PDF or image file</div>
+            <input type="file" id="file-input" name="file" accept=".pdf,.png,.jpg,.jpeg">
+        </div>
+        <div style="margin-top: 12px; display: flex; gap: 8px; align-items: center;">
+            <button type="submit" class="primary" id="upload-btn">Upload</button>
+            <span class="htmx-indicator spinner"></span>
+            <span id="upload-status" class="meta"></span>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="flex items-center justify-between mb-12">
+        <h2>Jobs</h2>
+        <span class="meta" id="jobs-ts"></span>
+    </div>
+    <div id="jobs-list"
+         hx-get="/api/jobs"
+         hx-trigger="load, every 5s"
+         hx-swap="innerHTML">
+        <div class="empty-state">Loading...</div>
+    </div>
+</div>
+
+<script>
+    // Show selected filename
+    document.getElementById('file-input').addEventListener('change', function() {
+        const name = this.files[0] ? this.files[0].name : 'No file selected';
+        document.getElementById('upload-label').textContent = name;
+    });
+
+    // Upload form submission
+    document.getElementById('upload-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const fileInput = document.getElementById('file-input');
+        if (!fileInput.files[0]) {
+            document.getElementById('upload-status').textContent = 'Select a file first.';
+            return;
+        }
+        const btn = document.getElementById('upload-btn');
+        btn.disabled = true;
+        document.getElementById('upload-status').textContent = 'Uploading...';
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        try {
+            const resp = await fetch('/api/upload', { method: 'POST', body: formData });
+            const data = await resp.json();
+            if (resp.ok) {
+                document.getElementById('upload-status').textContent = 'Queued: ' + data.job_id.slice(0, 8) + '...';
+                document.getElementById('upload-label').textContent = 'Click to select a PDF or image file';
+                fileInput.value = '';
+                // Trigger jobs list refresh
+                htmx.trigger('#jobs-list', 'load');
+            } else {
+                document.getElementById('upload-status').textContent = 'Error: ' + (data.error || 'upload failed');
+            }
+        } catch (err) {
+            document.getElementById('upload-status').textContent = 'Network error.';
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    // Render jobs list from HTMX response
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target.id === 'jobs-list') {
+            document.getElementById('jobs-ts').textContent = 'Updated ' + new Date().toLocaleTimeString();
+        }
+    });
+
+    // Override HTMX jobs render with custom HTML
+    document.body.addEventListener('htmx:beforeSwap', function(evt) {
+        if (evt.detail.target.id !== 'jobs-list') return;
+        try {
+            const jobs = JSON.parse(evt.detail.serverResponse);
+            if (!Array.isArray(jobs)) return;
+            if (jobs.length === 0) {
+                evt.detail.serverResponse = '<div class="empty-state">No jobs yet. Upload a document to get started.</div>';
+                return;
+            }
+            evt.detail.serverResponse = jobs.map(function(j) {
+                const status = j.status || 'pending';
+                const name = j.filename || j.question || j.id.slice(0, 8);
+                const type = j.job_type || '';
+                const step = j.current_step ? ' &middot; ' + j.current_step : '';
+                const ts = j.created_at ? new Date(j.created_at).toLocaleString() : '';
+                const spinner = (status === 'processing') ? '<span class="spinner" style="margin-left:8px;"></span>' : '';
+                return '<div class="job-row">' +
+                    '<div>' +
+                        '<div class="job-name">' + escHtml(name) + '</div>' +
+                        '<div class="job-meta">' + escHtml(type) + step + ' &middot; ' + ts + '</div>' +
+                    '</div>' +
+                    '<div style="display:flex;align-items:center;gap:8px;">' +
+                        '<span class="badge ' + status + '">' + status + '</span>' +
+                        spinner +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        } catch (_) { /* let HTMX handle as plain text */ }
+    });
+
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+</script>
+{% endblock %}

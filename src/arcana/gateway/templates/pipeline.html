@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Pipeline — Arcana{% endblock %}
+
+{% block head %}
+<style>
+    .pipeline-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid #1a1a1a;
+    }
+    .pipeline-row:last-child { border-bottom: none; }
+    .job-id { font-family: monospace; font-size: 11px; color: #666; }
+    .job-step { font-size: 11px; color: #888; }
+    .job-ts { font-size: 11px; color: #555; }
+    .htmx-indicator { display: none; }
+    .htmx-request .htmx-indicator { display: inline-block; }
+    .refresh-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Pipeline</h1>
+
+<div class="card">
+    <div class="refresh-row">
+        <h2>Active Jobs</h2>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span class="meta" id="pipeline-ts"></span>
+            <span class="htmx-indicator spinner" id="pipeline-spinner"></span>
+        </div>
+    </div>
+    <div id="pipeline-list"
+         hx-get="/api/jobs"
+         hx-trigger="load, every 5s"
+         hx-indicator="#pipeline-spinner"
+         hx-swap="innerHTML">
+        <div class="empty-state">Loading...</div>
+    </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+    <h2>Legend</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+        <span class="badge pending">pending</span>
+        <span class="badge processing">processing</span>
+        <span class="badge completed">completed</span>
+        <span class="badge failed">failed</span>
+    </div>
+</div>
+
+<script>
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+        if (evt.detail.target.id === 'pipeline-list') {
+            document.getElementById('pipeline-ts').textContent =
+                'Updated ' + new Date().toLocaleTimeString();
+        }
+    });
+
+    document.body.addEventListener('htmx:beforeSwap', function(evt) {
+        if (evt.detail.target.id !== 'pipeline-list') return;
+        try {
+            const jobs = JSON.parse(evt.detail.serverResponse);
+            if (!Array.isArray(jobs)) return;
+            if (jobs.length === 0) {
+                evt.detail.serverResponse = '<div class="empty-state">No jobs in the system yet.</div>';
+                return;
+            }
+            evt.detail.serverResponse = jobs.map(function(j) {
+                const status = j.status || 'pending';
+                const label = j.filename || j.question || '';
+                const step = j.current_step ? j.current_step : '';
+                const ts = j.updated_at ? new Date(j.updated_at).toLocaleString() : '';
+                const type = j.job_type || '';
+                const isActive = status === 'processing';
+                const spinner = isActive ? '<span class="spinner"></span>' : '';
+                return '<div class="pipeline-row">' +
+                    '<div>' +
+                        '<div style="font-size:13px;color:#ccc;">' + escHtml(label) + '</div>' +
+                        '<div style="display:flex;gap:8px;margin-top:2px;">' +
+                            '<span class="job-id">' + escHtml(j.id.slice(0, 8)) + '...</span>' +
+                            '<span class="job-step">' + escHtml(type) + (step ? ' / ' + step : '') + '</span>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div style="display:flex;align-items:center;gap:8px;">' +
+                        (ts ? '<span class="job-ts">' + ts + '</span>' : '') +
+                        '<span class="badge ' + status + '">' + status + '</span>' +
+                        spinner +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        } catch (_) { /* let HTMX handle as plain text */ }
+    });
+
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+</script>
+{% endblock %}

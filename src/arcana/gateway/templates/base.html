@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Arcana{% endblock %}</title>
+    <script src="https://unpkg.com/htmx.org@2.0.4" crossorigin="anonymous"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: #0a0a0a;
+            color: #e0e0e0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        nav {
+            background: #111;
+            border-bottom: 1px solid #222;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            height: 52px;
+        }
+
+        nav .brand {
+            font-weight: 700;
+            font-size: 16px;
+            color: #fff;
+            letter-spacing: 0.04em;
+            text-decoration: none;
+        }
+
+        nav a {
+            color: #999;
+            text-decoration: none;
+            font-size: 13px;
+            transition: color 0.15s;
+        }
+
+        nav a:hover, nav a.active { color: #e0e0e0; }
+
+        main {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+
+        h1 { font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 20px; }
+        h2 { font-size: 15px; font-weight: 600; color: #ccc; margin-bottom: 12px; }
+
+        .card {
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+
+        .badge.pending    { background: #1a1a2e; color: #6666cc; border: 1px solid #333; }
+        .badge.processing { background: #1a2e1a; color: #66cc66; border: 1px solid #2a4a2a; }
+        .badge.completed  { background: #0a2a0a; color: #44bb44; border: 1px solid #1a4a1a; }
+        .badge.failed     { background: #2e0a0a; color: #cc4444; border: 1px solid #4a1a1a; }
+        .badge.supported  { background: #0a1a2e; color: #4488cc; border: 1px solid #1a3a4a; }
+        .badge.unsupported{ background: #2e1a0a; color: #cc8844; border: 1px solid #4a2a1a; }
+        .badge.partial    { background: #1a1a0a; color: #ccbb44; border: 1px solid #4a4a1a; }
+
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #333;
+            border-top-color: #66cc66;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        input[type="text"],
+        input[type="file"],
+        textarea,
+        select {
+            background: #0d0d0d;
+            border: 1px solid #333;
+            border-radius: 4px;
+            color: #e0e0e0;
+            padding: 8px 12px;
+            font-size: 13px;
+            width: 100%;
+            outline: none;
+            transition: border-color 0.15s;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus { border-color: #555; }
+
+        button, .btn {
+            background: #1a1a1a;
+            border: 1px solid #444;
+            border-radius: 4px;
+            color: #e0e0e0;
+            cursor: pointer;
+            font-size: 13px;
+            padding: 8px 16px;
+            transition: background 0.15s, border-color 0.15s;
+        }
+
+        button:hover, .btn:hover {
+            background: #242424;
+            border-color: #666;
+        }
+
+        button.primary {
+            background: #1a3a1a;
+            border-color: #2a5a2a;
+            color: #88dd88;
+        }
+
+        button.primary:hover {
+            background: #213d21;
+            border-color: #3a6a3a;
+        }
+
+        .meta { color: #666; font-size: 12px; }
+        .gap-8 { gap: 8px; }
+        .flex { display: flex; }
+        .items-center { align-items: center; }
+        .justify-between { justify-content: space-between; }
+        .mb-12 { margin-bottom: 12px; }
+        .mb-20 { margin-bottom: 20px; }
+        .mt-12 { margin-top: 12px; }
+
+        .empty-state {
+            color: #555;
+            font-style: italic;
+            padding: 24px 0;
+            text-align: center;
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <nav>
+        <a href="/" class="brand">Arcana</a>
+        <a href="/" {% if request.url.path == '/' %}class="active"{% endif %}>Documents</a>
+        <a href="/query" {% if request.url.path == '/query' %}class="active"{% endif %}>Query</a>
+        <a href="/pipeline" {% if request.url.path == '/pipeline' %}class="active"{% endif %}>Pipeline</a>
+    </nav>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>

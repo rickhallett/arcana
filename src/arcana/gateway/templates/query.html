@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+
+{% block title %}Query — Arcana{% endblock %}
+
+{% block head %}
+<style>
+    #result-card { display: none; }
+    .claim-row {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 8px 0;
+        border-bottom: 1px solid #1a1a1a;
+    }
+    .claim-row:last-child { border-bottom: none; }
+    .claim-text { flex: 1; font-size: 13px; color: #ccc; }
+    .claim-source { font-size: 11px; color: #666; margin-top: 2px; }
+    .confidence-bar {
+        height: 4px;
+        background: #1a1a1a;
+        border-radius: 2px;
+        margin-top: 8px;
+        overflow: hidden;
+    }
+    .confidence-fill {
+        height: 100%;
+        background: #44bb44;
+        border-radius: 2px;
+        transition: width 0.5s ease;
+    }
+    #query-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .answer-text {
+        font-size: 14px;
+        line-height: 1.7;
+        color: #ddd;
+        white-space: pre-wrap;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Query</h1>
+
+<div class="card mb-20">
+    <h2>Ask a Question</h2>
+    <div style="margin-bottom: 12px;">
+        <textarea id="question-input"
+                  rows="3"
+                  placeholder="What was the total revenue in Q3? What risks were identified in the audit report?"
+                  style="resize: vertical;"></textarea>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <button class="primary" id="query-btn" onclick="submitQuery()">Submit Query</button>
+        <span id="query-spinner" class="spinner" style="display:none;"></span>
+        <span id="query-status" class="meta"></span>
+    </div>
+</div>
+
+<div class="card" id="result-card">
+    <div class="flex items-center justify-between mb-12">
+        <h2>Answer</h2>
+        <div style="display:flex;align-items:center;gap:8px;">
+            <span class="meta" id="result-confidence-label"></span>
+            <span id="result-status-badge"></span>
+        </div>
+    </div>
+    <div class="answer-text" id="result-answer"></div>
+    <div class="confidence-bar mt-12">
+        <div class="confidence-fill" id="confidence-fill" style="width:0%"></div>
+    </div>
+    <div style="margin-top: 20px;" id="claims-section">
+        <h2>Claims</h2>
+        <div id="claims-list"></div>
+    </div>
+    <div class="mt-12 meta" id="result-meta"></div>
+</div>
+
+<script>
+    async function submitQuery() {
+        const question = document.getElementById('question-input').value.trim();
+        if (!question) {
+            document.getElementById('query-status').textContent = 'Enter a question first.';
+            return;
+        }
+
+        const btn = document.getElementById('query-btn');
+        btn.disabled = true;
+        document.getElementById('query-spinner').style.display = 'inline-block';
+        document.getElementById('query-status').textContent = 'Running pipeline...';
+        document.getElementById('result-card').style.display = 'none';
+
+        try {
+            const resp = await fetch('/api/query', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ question }),
+            });
+            const data = await resp.json();
+
+            if (!resp.ok) {
+                document.getElementById('query-status').textContent = 'Error: ' + (data.error || 'query failed');
+                return;
+            }
+
+            renderResult(data);
+            document.getElementById('query-status').textContent = '';
+        } catch (err) {
+            document.getElementById('query-status').textContent = 'Network error.';
+        } finally {
+            btn.disabled = false;
+            document.getElementById('query-spinner').style.display = 'none';
+        }
+    }
+
+    function renderResult(data) {
+        const report = data.report || {};
+        const status = data.status || 'failed';
+        const confidence = report.confidence != null ? report.confidence : 0;
+        const pct = Math.round(confidence * 100);
+
+        document.getElementById('result-status-badge').innerHTML =
+            '<span class="badge ' + status + '">' + status + '</span>';
+        document.getElementById('result-answer').textContent = report.answer || '(no answer)';
+        document.getElementById('result-confidence-label').textContent = 'Confidence: ' + pct + '%';
+        document.getElementById('confidence-fill').style.width = pct + '%';
+
+        // Claims
+        let claims = [];
+        try { claims = JSON.parse(report.claims_json || '[]'); } catch (_) {}
+        const claimsList = document.getElementById('claims-list');
+        if (claims.length === 0) {
+            claimsList.innerHTML = '<div class="empty-state">No claims extracted.</div>';
+        } else {
+            claimsList.innerHTML = claims.map(function(c) {
+                const supported = c.supported === true ? 'supported'
+                    : c.supported === false ? 'unsupported' : 'partial';
+                const page = c.page ? ' p.' + c.page : '';
+                const source = c.source ? escHtml(c.source) + page : page;
+                return '<div class="claim-row">' +
+                    '<span class="badge ' + supported + '">' + supported + '</span>' +
+                    '<div>' +
+                        '<div class="claim-text">' + escHtml(c.text || c.claim || '') + '</div>' +
+                        (source ? '<div class="claim-source">' + source + '</div>' : '') +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        }
+
+        const cost = report.cost_usd != null ? '$' + report.cost_usd.toFixed(4) : '';
+        const dur = report.duration_s != null ? report.duration_s.toFixed(2) + 's' : '';
+        const meta = [cost, dur].filter(Boolean).join(' · ');
+        document.getElementById('result-meta').textContent = meta;
+
+        document.getElementById('result-card').style.display = 'block';
+    }
+
+    function escHtml(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    // Allow Ctrl+Enter to submit
+    document.getElementById('question-input').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            e.preventDefault();
+            submitQuery();
+        }
+    });
+</script>
+{% endblock %}
