@@ -24,7 +24,7 @@ spec:
             - name: ARCANA_WORKER_TYPE
               value: extractor
             - name: ARCANA_NATS_URL
-              value: nats://nats.halo-fleet.svc.cluster.local:4222
+              value: nats://hq:lxFDhD1sHNuGAmcE1kTPX6Ea6g9LzPXx@nats.halo-fleet.svc.cluster.local:4222
             - name: ARCANA_UPLOADS_DIR
               value: /data/uploads
             - name: ARCANA_OPENAI_API_KEY
@@ -72,7 +72,7 @@ spec:
             - name: ARCANA_WORKER_TYPE
               value: embedder
             - name: ARCANA_NATS_URL
-              value: nats://nats.halo-fleet.svc.cluster.local:4222
+              value: nats://hq:lxFDhD1sHNuGAmcE1kTPX6Ea6g9LzPXx@nats.halo-fleet.svc.cluster.local:4222
             - name: ARCANA_CHROMA_HOST
               value: arcana-chromadb
             - name: ARCANA_OPENAI_API_KEY
@@ -113,7 +113,7 @@ spec:
             - name: ARCANA_WORKER_TYPE
               value: analyst
             - name: ARCANA_NATS_URL
-              value: nats://nats.halo-fleet.svc.cluster.local:4222
+              value: nats://hq:lxFDhD1sHNuGAmcE1kTPX6Ea6g9LzPXx@nats.halo-fleet.svc.cluster.local:4222
             - name: ARCANA_CHROMA_HOST
               value: arcana-chromadb
             - name: ARCANA_ANTHROPIC_API_KEY
@@ -154,7 +154,7 @@ spec:
             - name: ARCANA_WORKER_TYPE
               value: checker
             - name: ARCANA_NATS_URL
-              value: nats://nats.halo-fleet.svc.cluster.local:4222
+              value: nats://hq:lxFDhD1sHNuGAmcE1kTPX6Ea6g9LzPXx@nats.halo-fleet.svc.cluster.local:4222
             - name: ARCANA_OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
