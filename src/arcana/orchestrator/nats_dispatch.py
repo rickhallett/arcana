@@ -67,6 +67,13 @@ class NATSDispatcher:
                 log(
                     "dispatch",
                     "info",
+                    "dispatch_response",
+                    {"subject": subject, "job_id": job_id, "result_keys": list(result.keys())},
+                    correlation_id,
+                )
+                log(
+                    "dispatch",
+                    "info",
                     "dispatch_ok",
                     {"subject": subject, "job_id": job_id, "step": step, "attempt": attempt},
                     correlation_id,

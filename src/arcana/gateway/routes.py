@@ -5,6 +5,7 @@ import time
 from fastapi import APIRouter, File, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 
+from arcana.log import log
 from arcana.orchestrator.ingest import build_ingest_graph
 from arcana.orchestrator.query import build_query_graph
 
@@ -62,8 +63,17 @@ async def upload_document(request: Request, file: UploadFile = File(...)):  # no
 async def _run_ingest(graph, state, doc_store):
     try:
         result = await graph.ainvoke(state)
-        await doc_store.update_job_status(state["job_id"], result.get("status", "failed"))
-    except Exception:
+        status = result.get("status", "failed")
+        log("ingest", "info", "ingest_complete", {
+            "job_id": state["job_id"], "status": status,
+            "chunk_count": result.get("chunk_count"),
+            "error": result.get("error"),
+        })
+        await doc_store.update_job_status(state["job_id"], status)
+    except Exception as e:
+        log("ingest", "error", "ingest_exception", {
+            "job_id": state["job_id"], "error": str(e),
+        })
         await doc_store.update_job_status(state["job_id"], "failed")
 
 

@@ -19,6 +19,8 @@ def build_ingest_graph(dispatcher: NATSDispatcher):
                 step="extract",
                 correlation_id=state["job_id"],
             )
+            if "error" in result:
+                return {**state, "status": "failed", "error": result["error"]}
             return {
                 **state,
                 "text": result["text"],

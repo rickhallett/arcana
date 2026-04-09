@@ -53,8 +53,6 @@ async def test_process_msg_skips_duplicate(worker):
     msg.respond.assert_called_once()
     response_payload = json.loads(msg.respond.call_args[0][0].decode())
     assert response_payload == {"skipped": True}
-    msg.ack.assert_called_once()
-    msg.nak.assert_not_called()
 
 
 async def test_health_returns_false_without_connection(worker):
@@ -75,8 +73,6 @@ async def test_process_msg_processes_new_message(worker):
 
     await worker.process_msg(msg)
 
-    msg.ack.assert_called_once()
-    msg.nak.assert_not_called()
     assert worker.is_processed("key-new") is True
     response_payload = json.loads(msg.respond.call_args[0][0].decode())
     assert "echo" in response_payload

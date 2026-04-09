@@ -1,3 +1,4 @@
+import asyncio
 import json
 from abc import ABC, abstractmethod
 
@@ -37,7 +38,6 @@ class BaseWorker(ABC):
         if idem_key and self.is_processed(idem_key):
             log(self.subject, "info", "duplicate_skipped", {"key": idem_key}, correlation_id)
             await msg.respond(json.dumps({"skipped": True}).encode())
-            await msg.ack()
             return
 
         try:
@@ -48,33 +48,23 @@ class BaseWorker(ABC):
             if idem_key:
                 self.mark_processed(idem_key)
             await msg.respond(json.dumps(result).encode())
-            await msg.ack()
             log(self.subject, "info", "completed", {"job_id": job_id}, correlation_id)
         except Exception as e:
             log(self.subject, "error", "failed", {"error": str(e), "key": idem_key}, correlation_id)
-            await msg.nak()
+            # Respond with error so orchestrator doesn't hang
+            await msg.respond(json.dumps({"error": str(e)}).encode())
 
     async def start(self) -> None:
         self._nc = await nats.connect(self.nats_url)
-        js = self._nc.jetstream()
 
-        # Retry subscribe — NATS JetStream may not be ready immediately
-        for attempt in range(1, 6):
-            try:
-                self._sub = await js.subscribe(
-                    self.subject, queue=f"{self.subject}-workers", manual_ack=True,
-                    stream="ARCANA",
-                )
-                break
-            except Exception as e:
-                log(self.subject, "warning", "subscribe_retry",
-                    {"attempt": attempt, "error": str(e)})
-                if attempt == 5:
-                    raise
-                await asyncio.sleep(attempt * 2)
+        # Use core NATS subscribe with queue group for request/reply pattern
+        # The orchestrator dispatches via nc.request(), workers respond via msg.respond()
+        queue_group = f"{self.subject}-workers"
+        self._sub = await self._nc.subscribe(self.subject, queue=queue_group)
 
         self._running = True
         log(self.subject, "info", "worker_started", {"subject": self.subject})
+
         async for msg in self._sub.messages:
             if not self._running:
                 break
