@@ -17,6 +17,19 @@
   <img src="https://img.shields.io/badge/docker-compose-2496ED?logo=docker&logoColor=white" alt="Docker" />
 </p>
 
+```mermaid
+graph LR
+    UP["Upload / Query"] --> GW["Gateway -- FastAPI + HTMX"]
+    GW --> NATS["NATS JetStream"]
+    NATS --> EX["Extractor"]
+    NATS --> EM["Embedder"]
+    NATS --> AN["Analyst -- LangGraph"]
+    NATS --> CH["Checker -- LLM-as-judge"]
+    CH -->|"result"| GW
+    AN --> VEC[("ChromaDB")]
+    EX --> PG[("PostgreSQL")]
+```
+
 ---
 
 ## Architecture
