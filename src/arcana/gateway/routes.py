@@ -111,16 +111,16 @@ async def get_job(request: Request, job_id: str):
 @router.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     templates = request.app.state.templates
-    return templates.TemplateResponse("documents.html", {"request": request})
+    return templates.TemplateResponse(request, "documents.html")
 
 
 @router.get("/query", response_class=HTMLResponse)
 async def query_page(request: Request):
     templates = request.app.state.templates
-    return templates.TemplateResponse("query.html", {"request": request})
+    return templates.TemplateResponse(request, "query.html")
 
 
 @router.get("/pipeline", response_class=HTMLResponse)
 async def pipeline_page(request: Request):
     templates = request.app.state.templates
-    return templates.TemplateResponse("pipeline.html", {"request": request})
+    return templates.TemplateResponse(request, "pipeline.html")
