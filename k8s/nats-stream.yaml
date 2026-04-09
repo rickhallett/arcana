@@ -17,6 +17,8 @@ spec:
             - |
               nats stream add ARCANA \
                 --server nats://nats.halo-fleet:4222 \
+                --user advisor \
+                --password fiLJRp6sPeZv4cJbg3Z6zVQxGvsDGMW2 \
                 --subjects "arcana.>" \
                 --retention limits \
                 --max-age 72h \
