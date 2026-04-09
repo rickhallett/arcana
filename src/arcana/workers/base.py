@@ -1,5 +1,4 @@
 import json
-import asyncio
 from abc import ABC, abstractmethod
 
 import nats
@@ -43,13 +42,14 @@ class BaseWorker(ABC):
 
         try:
             payload = json.loads(msg.data.decode())
-            log(self.subject, "info", "processing", {"job_id": payload.get("job_id")}, correlation_id)
+            job_id = payload.get("job_id")
+            log(self.subject, "info", "processing", {"job_id": job_id}, correlation_id)
             result = await self.handle(payload)
             if idem_key:
                 self.mark_processed(idem_key)
             await msg.respond(json.dumps(result).encode())
             await msg.ack()
-            log(self.subject, "info", "completed", {"job_id": payload.get("job_id")}, correlation_id)
+            log(self.subject, "info", "completed", {"job_id": job_id}, correlation_id)
         except Exception as e:
             log(self.subject, "error", "failed", {"error": str(e), "key": idem_key}, correlation_id)
             await msg.nak()
@@ -57,7 +57,9 @@ class BaseWorker(ABC):
     async def start(self) -> None:
         self._nc = await nats.connect(self.nats_url)
         js = self._nc.jetstream()
-        self._sub = await js.subscribe(self.subject, queue=f"{self.subject}-workers", manual_ack=True)
+        self._sub = await js.subscribe(
+            self.subject, queue=f"{self.subject}-workers", manual_ack=True
+        )
         self._running = True
         log(self.subject, "info", "worker_started", {"subject": self.subject})
         async for msg in self._sub.messages:

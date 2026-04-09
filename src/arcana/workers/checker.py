@@ -4,20 +4,18 @@ from langchain_openai import ChatOpenAI
 
 from arcana.workers.base import BaseWorker
 
-
-CHECKER_PROMPT = """You are a fact-checker. Given a draft briefing and source chunks, verify each factual claim.
-
-## Draft Briefing
-{draft}
-
-## Source Chunks
-{chunks}
-
-## Instructions
-For each factual claim in the draft, determine if it's supported by the source chunks.
-Return a JSON object with this exact structure:
-{{"claims": [{{"text": "the claim", "verdict": "supported" | "unsupported" | "partial", "chunk_id": "relevant chunk id", "explanation": "brief explanation"}}]}}
-Return ONLY valid JSON, no other text."""
+CHECKER_PROMPT = (
+    "You are a fact-checker. Given a draft briefing and source chunks,"
+    " verify each factual claim.\n\n"
+    "## Draft Briefing\n{draft}\n\n"
+    "## Source Chunks\n{chunks}\n\n"
+    "## Instructions\n"
+    "For each factual claim in the draft, determine if it's supported by the source chunks.\n"
+    "Return a JSON object with this exact structure:\n"
+    '{{"claims": [{{"text": "the claim", "verdict": "supported" | "unsupported" | "partial",'
+    ' "chunk_id": "relevant chunk id", "explanation": "brief explanation"}}]}}\n'
+    "Return ONLY valid JSON, no other text."
+)
 
 
 class CheckerWorker(BaseWorker):
@@ -31,7 +29,7 @@ class CheckerWorker(BaseWorker):
         chunks = payload["chunks"]
         chunk_ids = payload["chunk_ids"]
         chunks_text = "\n\n".join(
-            f"[{cid}]\n{text}" for text, cid in zip(chunks, chunk_ids)
+            f"[{cid}]\n{text}" for text, cid in zip(chunks, chunk_ids, strict=False)
         )
         prompt = CHECKER_PROMPT.format(draft=draft, chunks=chunks_text)
         response = await self.llm.ainvoke([{"role": "user", "content": prompt}])

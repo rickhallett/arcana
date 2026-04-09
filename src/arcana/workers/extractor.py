@@ -46,7 +46,10 @@ class ExtractorWorker(BaseWorker):
             "content": [
                 {
                     "type": "text",
-                    "text": "Extract all text content from this image. Preserve structure. Return the extracted text and suggest a title.",
+                    "text": (
+                        "Extract all text content from this image. Preserve structure."
+                        " Return the extracted text and suggest a title."
+                    ),
                 },
                 {
                     "type": "image_url",

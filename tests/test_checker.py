@@ -51,7 +51,11 @@ async def test_handle_returns_claims(worker):
 
 
 async def test_handle_strips_markdown_fencing(worker):
-    claims_payload = {"claims": [{"text": "Claim.", "verdict": "partial", "chunk_id": "c1", "explanation": "Partial."}]}
+    claims_payload = {
+        "claims": [
+            {"text": "Claim.", "verdict": "partial", "chunk_id": "c1", "explanation": "Partial."}
+        ]
+    }
     raw_json = json.dumps(claims_payload)
     mock_response = MagicMock()
     mock_response.content = f"```json\n{raw_json}\n```"

@@ -4,20 +4,17 @@ from langchain_anthropic import ChatAnthropic
 
 from arcana.workers.base import BaseWorker
 
-
-ANALYST_PROMPT = """You are a research analyst. Answer the question based ONLY on the provided source chunks. Cite your sources using [N] notation where N is the chunk number (1-indexed).
-
-## Source Chunks
-{chunks}
-
-## Question
-{question}
-
-## Instructions
-- Answer thoroughly but concisely
-- Cite every factual claim with [N] referencing the chunk number
-- If the sources don't contain enough information, say so explicitly
-- Do not invent information not present in the sources"""
+ANALYST_PROMPT = (
+    "You are a research analyst. Answer the question based ONLY on the provided source chunks."
+    " Cite your sources using [N] notation where N is the chunk number (1-indexed).\n\n"
+    "## Source Chunks\n{chunks}\n\n"
+    "## Question\n{question}\n\n"
+    "## Instructions\n"
+    "- Answer thoroughly but concisely\n"
+    "- Cite every factual claim with [N] referencing the chunk number\n"
+    "- If the sources don't contain enough information, say so explicitly\n"
+    "- Do not invent information not present in the sources"
+)
 
 
 class AnalystWorker(BaseWorker):
@@ -37,7 +34,7 @@ class AnalystWorker(BaseWorker):
         chunk_ids = payload["chunk_ids"]
         chunks_text = "\n\n".join(
             f"[{i+1}] (id: {cid})\n{text}"
-            for i, (text, cid) in enumerate(zip(chunks, chunk_ids))
+            for i, (text, cid) in enumerate(zip(chunks, chunk_ids, strict=False))
         )
         prompt = ANALYST_PROMPT.format(chunks=chunks_text, question=question)
         response = await self.llm.ainvoke([{"role": "user", "content": prompt}])
